@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+<style>
+
+body {
+  position: relative;
+}
+
+svg,
+canvas {
+  position: absolute;
+}
+
+.chart div {
+  font: 10px;
+  text-align: right;
+  padding: 3px;
+  margin: 1px;
+  color: white;
+}
+.title {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.axis text {
+  font: 10px sans-serif;
+}
+
+.axis path,
+.axis line {
+  stroke: #777;
+  stroke-dasharray: 2,2;
+  shape-rendering: crispEdges;
+}
+
+.axis path {
+  display: none;
+}
+
+</style>
+<div class="chart"></div>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+// Widths and heights
+var width = 1000;
+var wLabelsy = 20;
+var wTitley = 30;
+var wLegend = 50;
+var wTitleLegend = 40;
+var height = 600;
+var hTitle = 50;
+var hLabelsx = 20;
+var hTitlex = 20;
+var barPadding = 1;
+var wChart = width - wLabelsy - wTitley - wLegend - wTitleLegend;
+var hChart = height - hTitle - hLabelsx - hTitlex;
+
+d3.json("data/hs-dp-JPD_Pt-6.json", function(error, json) {
+  if (error) return console.warn(error);
+  var x1data = json.hs_bin;
+  var x2data = json.dp_bin;
+  var ydata = json.jpd;
+  renderJPD(x1data, x2data, ydata);
+});
+
+function renderJPD(x1data, x2data, ydata) {
+
+  var title = x1data.attributes.long_name + " / " + x2data.attributes.long_name + " - " + ydata.attributes.long_name + " at point ???";
+  var xlabel = x1data.attributes.long_name + " [" + x1data.attributes.units + "]";
+  var ylabel = x2data.attributes.long_name + " [" + x2data.attributes.units + "]";
+  var legendlabel = ydata.attributes.long_name + " [" + ydata.attributes.units + "]";
+
+  var dx = x1data._values[0].length,
+      dy = x2data._values[0].length;
+
+  var x1 = d3.scale.linear()
+      .domain([0, d3.max(x1data._values[0])])
+      .range([0, wChart]);
+
+  var x2 = d3.scale.linear()
+      .domain([0, dy])
+      .range([hChart, 0]);
+
+  var ymax = d3.max(ydata._values[0], function(array) {
+    return d3.max(array);
+  });
+
+  var y = d3.scale.linear()
+      .domain([0, ymax])
+      .range([hChart, 0]);
+
+  var color = d3.scale.linear()
+      .domain([0, ymax/50, 2*ymax/5, ymax/2, 3*ymax/5, ymax])
+      .range(["#ffffff", "#0000ff", "#00ffff", "#00ff00", "#ffff00", "#ff0000"]);
+
+  var xAxis = d3.svg.axis()
+      .scale(x1)
+      .orient("bottom")
+      .tickSize(hChart)
+      .ticks(20);
+
+  var yAxis = d3.svg.axis()
+      .scale(x2)
+      .orient("left")
+      .tickSize(wChart)
+      .ticks(24);
+
+  d3.select(".chart").append("canvas")
+      .attr("width", dx)
+      .attr("height", dy)
+      .style("width", wChart + "px")
+      .style("height", hChart + "px")
+      .style("top", hTitle + "px")
+      .style("left", (wLabelsy + wTitley) + "px")
+      .call(drawImage);
+
+  var svg = d3.select(".chart").append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+  svg.append('g')
+      .append("text")
+      .attr("x", width / 2)
+      .attr("y", hTitle / 2)
+      .style("text-anchor", "middle")
+      .attr("class", "title")
+      .text(title);
+
+  svg.append('g')
+      .attr('transform', 'translate(' + (wLabelsy + wTitley) + ',0)')
+      .append("text")
+      .attr("x", width / 2)
+      .attr("y", height - hTitlex / 2)
+      .style("text-anchor", "middle")
+      .text(xlabel);
+
+  svg.append('g')
+      .attr('transform', ' rotate(-90)')
+      .append("text")
+      .attr("x", - hTitle - (hChart / 2))
+      .attr("y", wTitley / 2)
+      .style("text-anchor", "middle")
+      .text(ylabel);
+
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(" + (wLabelsy + wTitley) + "," + (hTitle) + ")")
+      .call(xAxis)
+      .call(removeZero);
+
+  svg.append("g")
+      .attr("class", "y axis")
+      .attr("transform", "translate(" + (wChart + wLabelsy + wTitley) + "," + hTitle + ")")
+      .call(yAxis)
+      .call(removeZero);
+
+  var borderPath = svg.append("g").append("rect")
+      .attr("x", wLabelsy + wTitley)
+      .attr("y", hTitle)
+      .attr("height", hChart)
+      .attr("width", wChart)
+      .style("stroke", "black")
+      .style("fill", "none")
+      .style("stroke-width", "1");
+
+  var legendData = d3.range(0,hChart);
+
+  var rects = svg.append("g").selectAll("rect")
+      .data(legendData)
+      .enter()
+      .append("rect")
+      .attr("width", wLegend / 2)
+      .attr("height", "1")
+      .attr("x", width - wTitleLegend - wLegend + 10)
+      .attr("y", function(d,i) {
+          return i * 1 + hTitle;
+        })
+      .attr("fill", function(d,i) {
+          return color((hChart - d) * ymax / hChart);
+        });
+
+  var legendAxis = d3.svg.axis()
+      .scale(y)
+      .orient("right")
+      .ticks(8);
+
+  svg.append("g")
+      .attr("class", "legend axis")
+      .attr("transform", "translate(" + (wChart + wLabelsy + wTitley + wLegend / 2 + 10) + "," + hTitle + ")")
+      .call(legendAxis);
+
+  svg.append('g')
+      .attr('transform', ' rotate(-90)')
+      .append("text")
+      .attr("x", - hTitle - (hChart / 2))
+      .attr("y", width - 5)
+      .style("text-anchor", "middle")
+      .text(legendlabel);
+
+  // Compute the pixel colors; scaled by CSS.
+  function drawImage(canvas) {
+    var context = canvas.node().getContext("2d"),
+        image = context.createImageData(dx, dy);
+
+    for (var y = 0, p = -1; y < dy; ++y) {
+      for (var x = 0; x < dx; ++x) {
+        var c = d3.rgb(color(ydata._values[0][x][dy - + y]));
+        image.data[++p] = c.r;
+        image.data[++p] = c.g;
+        image.data[++p] = c.b;
+        image.data[++p] = 255;
+      }
+    }
+
+    context.putImageData(image, 0, 0);
+  }
+
+  function removeZero(axis) {
+    axis.selectAll("g").filter(function(d) { return !d; }).remove();
+  }
+
+}
+
+</script>

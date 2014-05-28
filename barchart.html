@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+<style>
+
+.chart div {
+  font: 10px;
+  text-align: right;
+  padding: 3px;
+  margin: 1px;
+  color: white;
+}
+.title {
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.axis path {
+  display: none;
+}
+
+.axis line {
+  stroke: #777;
+  stroke-dasharray: 2,2;
+  shape-rendering: crispEdges;
+}
+
+</style>
+<div class="chart"></div>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+// Widths and heights
+var width = 1000;
+var wLabelsy = 20;
+var wTitley = 30;
+var height = 600;
+var hTitle = 50;
+var hLabelsx = 20;
+var hTitlex = 20;
+var barPadding = 1;
+var wChart = width - wLabelsy - wTitley;
+var hChart = height - hTitle - hLabelsx - hTitlex;
+
+d3.json("data/mag-PD_Pt-1.json", function(error, json) {
+  if (error) return console.warn(error);
+  var xdata = json.mag_bin;
+  var ydata = json.jpd;
+  renderPD(xdata, ydata);
+});
+
+function renderPD(xdata, ydata) {
+
+  var title = xdata.attributes.long_name + " " + ydata.attributes.long_name + " at point ???";
+  var xlabel = xdata.attributes.long_name + " [" + xdata.attributes.units + "]";
+  var ylabel = ydata.attributes.long_name + " [" + ydata.attributes.units + "]";
+
+  var x = d3.scale.linear().domain([0, d3.max(xdata._values[0])]).range([0, wChart - wChart / ydata._values[0].length]);
+
+  var y = d3.scale.linear().domain([0, d3.max(ydata._values[0])]).range([hChart, 0]);
+
+  var svg = d3.select(".chart")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+  svg.append('g')
+      .append("text")
+      .attr("x", width / 2)
+      .attr("y", hTitle / 2)
+      .style("text-anchor", "middle")
+      .attr("class", "title")
+      .text(title);
+
+  svg.append('g')
+      .attr('transform', 'translate(' + (wLabelsy + wTitley) + ',0)')
+      .append("text")
+      .attr("x", width / 2)
+      .attr("y", height - hTitlex / 2)
+      .style("text-anchor", "middle")
+      .text(xlabel);
+
+  svg.append('g')
+      .attr('transform', ' rotate(-90)')
+      .append("text")
+      .attr("x", - hTitle - (hChart / 2))
+      .attr("y", wTitley / 2)
+      .style("text-anchor", "middle")
+      .text(ylabel);
+
+  var barsContainer = svg.append('g')
+                         .attr('transform', 'translate(' + (wLabelsy + wTitley) + ',' + hTitle + ')');
+
+  barsContainer.append("g")
+               .selectAll("rect")
+               .data(ydata._values[0])
+               .enter()
+               .append("rect")
+               .attr("x", function(d, i) {
+                  return i * (wChart / ydata._values[0].length);
+               })
+               .attr("y", function(d) {
+                  return hChart - d * hChart / d3.max(ydata._values[0]);
+               })
+               .attr("width", wChart / ydata._values[0].length - barPadding)
+               .attr("height", function(d) {
+                  return d * hChart / d3.max(ydata._values[0]);
+               })
+               .attr("fill", "#7bb0cd");
+
+  var xAxis = d3.svg.axis()
+    .scale(x)
+    .tickSize(hChart)
+    .orient("bottom");
+
+  barsContainer.append("g")
+    .attr("class", "x axis")
+    .style("font-size", hLabelsx / 2)
+    .call(xAxis);
+
+
+  var yAxis = d3.svg.axis()
+    .scale(y)
+    .tickSize(wChart)
+    .orient("left");
+
+  barsContainer.append("g")
+    .attr("class", "y axis")
+    .attr("transform", "translate(" + wChart + ", 0)")
+    .style("font-size", hLabelsx / 2)
+    .call(yAxis);
+
+
+  var borderPath = barsContainer.append("rect")
+                                .attr("x", 0)
+                                .attr("y", 0)
+                                .attr("height", hChart)
+                                .attr("width", wChart)
+                                .style("stroke", "black")
+                                .style("fill", "none")
+                                .style("stroke-width", "1");
+
+}
+
+</script>
