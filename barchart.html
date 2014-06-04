@@ -28,30 +28,40 @@
 </style>
 <div class="chart"></div>
 <script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.js"></script>
 <script>
-
-// Widths and heights
-var width = 1000;
-var wLabelsy = 20;
-var wTitley = 30;
-var height = 600;
-var hTitle = 50;
-var hLabelsx = 20;
-var hTitlex = 20;
-var barPadding = 1;
-var wChart = width - wLabelsy - wTitley;
-var hChart = height - hTitle - hLabelsx - hTitlex;
-
-d3.json("data/mag-PD_Pt-1.json", function(error, json) {
-  if (error) return console.warn(error);
-  var xdata = json.mag_bin;
-  var ydata = json.jpd;
-  renderPD(xdata, ydata);
+$.ajax({
+    url: "http://test-compass.openocean.fr/api/point-stat/CUR-theta-PD_Point4/get_visu_data/?format=json",
+    type: "GET",
+    dataType: 'json',
+    xhrFields: {
+        withCredentials: true
+    },
+    success: function (json) {
+      renderPD(json);
+      console.log(json.visualization.driver.method);
+    }
 });
 
-function renderPD(xdata, ydata) {
+function renderPD(json) {
 
-  var title = xdata.attributes.long_name + " " + ydata.attributes.long_name + " at point ???";
+  // Widths and heights
+  var width = 1000;
+  var wLabelsy = 20;
+  var wTitley = 30;
+  var height = 600;
+  var hTitle = 50;
+  var hLabelsx = 20;
+  var hTitlex = 20;
+  var barPadding = 1;
+  var wChart = width - wLabelsy - wTitley;
+  var hChart = height - hTitle - hLabelsx - hTitlex;
+
+  var xdata = json[json.visualization.kwargs.x_name];
+  var ydata = json[json.visualization.kwargs.y_name];
+  var metadata = json.visualization;
+
+  var title = metadata.web["data-legend-0"];
   var xlabel = xdata.attributes.long_name + " [" + xdata.attributes.units + "]";
   var ylabel = ydata.attributes.long_name + " [" + ydata.attributes.units + "]";
 

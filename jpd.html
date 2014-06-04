@@ -41,34 +41,43 @@ canvas {
 
 </style>
 <div class="chart"></div>
-<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="/static/vendor/d3.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.js"></script>
 <script>
 
-// Widths and heights
-var width = 1000;
-var wLabelsy = 20;
-var wTitley = 30;
-var wLegend = 50;
-var wTitleLegend = 40;
-var height = 600;
-var hTitle = 50;
-var hLabelsx = 20;
-var hTitlex = 20;
-var barPadding = 1;
-var wChart = width - wLabelsy - wTitley - wLegend - wTitleLegend;
-var hChart = height - hTitle - hLabelsx - hTitlex;
-
-d3.json("data/hs-dp-JPD_Pt-6.json", function(error, json) {
-  if (error) return console.warn(error);
-  var x1data = json.hs_bin;
-  var x2data = json.dp_bin;
-  var ydata = json.jpd;
-  renderJPD(x1data, x2data, ydata);
+$.ajax({
+    url: "http://test-compass.openocean.fr/api/point-stat/CUR-JPD_Point7/get_visu_data/?format=json",
+    type: "GET",
+    dataType: 'json',
+    xhrFields: {
+        withCredentials: true
+    },
+    success: function (json) {
+      renderJPD(json);
+    }
 });
 
-function renderJPD(x1data, x2data, ydata) {
+function renderJPD(json) {
 
-  var title = x1data.attributes.long_name + " / " + x2data.attributes.long_name + " - " + ydata.attributes.long_name + " at point ???";
+  // Widths and heights
+  var width = 800;
+  var wLabelsy = 20;
+  var wTitley = 30;
+  var wLegend = 50;
+  var wTitleLegend = 40;
+  var height = 600;
+  var hTitle = 50;
+  var hLabelsx = 20;
+  var hTitlex = 20;
+  var wChart = width - wLabelsy - wTitley - wLegend - wTitleLegend;
+  var hChart = height - hTitle - hLabelsx - hTitlex;
+
+  var x1data = json[json.visualization.kwargs.x_name];
+  var x2data = json[json.visualization.kwargs.y_name];
+  var ydata = json[json.visualization.kwargs.c_name];
+  var metadata = json.visualization;
+
+  var title = metadata.web["data-legend-0"];
   var xlabel = x1data.attributes.long_name + " [" + x1data.attributes.units + "]";
   var ylabel = x2data.attributes.long_name + " [" + x2data.attributes.units + "]";
   var legendlabel = ydata.attributes.long_name + " [" + ydata.attributes.units + "]";
@@ -77,11 +86,11 @@ function renderJPD(x1data, x2data, ydata) {
       dy = x2data._values[0].length;
 
   var x1 = d3.scale.linear()
-      .domain([0, d3.max(x1data._values[0])])
+      .domain([d3.min(x1data._values[0]), d3.max(x1data._values[0])])
       .range([0, wChart]);
 
   var x2 = d3.scale.linear()
-      .domain([0, dy])
+      .domain([d3.min(x2data._values[0]), d3.max(x2data._values[0])])
       .range([hChart, 0]);
 
   var ymax = d3.max(ydata._values[0], function(array) {
@@ -154,8 +163,7 @@ function renderJPD(x1data, x2data, ydata) {
   svg.append("g")
       .attr("class", "y axis")
       .attr("transform", "translate(" + (wChart + wLabelsy + wTitley) + "," + hTitle + ")")
-      .call(yAxis)
-      .call(removeZero);
+      .call(yAxis);
 
   var borderPath = svg.append("g").append("rect")
       .attr("x", wLabelsy + wTitley)

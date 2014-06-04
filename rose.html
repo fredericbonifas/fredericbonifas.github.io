@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+<style>
+
+.chart div {
+  font: 10px;
+  text-align: right;
+  padding: 3px;
+  margin: 1px;
+  color: white;
+}
+.title {
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.axis path {
+  display: none;
+}
+
+.axis {
+  stroke: #777;
+  stroke-dasharray: 5,5;
+  fill: none;
+}
+
+.axis-main{
+  stroke-dasharray: 0;
+}
+
+</style>
+<div class="chart"></div>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.js"></script>
+<script>
+
+$.ajax({
+    url: "http://test-compass.openocean.fr/api/point-stat/CUR-ROSE_Point2/get_visu_data/?format=json",
+    type: "GET",
+    dataType: 'json',
+    xhrFields: {
+        withCredentials: true
+    },
+    success: function (json) {
+      renderR(json);
+    }
+});
+
+function renderR(json) {
+
+  // Widths and heights
+  var wChart = 600;
+  var hChart = wChart;
+  var wMargin = 20;
+  var hMargin = wMargin;
+  var width = wChart + wMargin * 2;
+  var hTitle = 50;
+  var height = hTitle + hChart + hMargin * 2;
+  var xCenter = wChart / 2 + wMargin;
+  var yCenter = hChart / 2 + hMargin;
+  var speedTicks = 5;
+  var sdat = [];
+
+  var labels = [
+    {"angle": 0, "name": "E"},
+    {"angle": 45, "name": "S-E"},
+    {"angle": 90, "name": "S"},
+    {"angle": 135, "name": "S-W"},
+    {"angle": 180, "name": "W"},
+    {"angle": 225, "name": "N-W"},
+    {"angle": 270, "name": "N"},
+    {"angle": 315, "name": "N-E"}];
+
+  var tdata = json.theta;
+  var mdata = json.mag;
+  var metadata = json.visualization;
+
+  for (i=0; i<=speedTicks; i++) {
+    sdat[i] = i;
+  }
+
+  var title = metadata.web["data-legend-0"];
+
+  var svg = d3.select(".chart")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+  svg.append('g')
+      .append("text")
+      .attr("x", width / 2)
+      .attr("y", hTitle / 2)
+      .style("text-anchor", "middle")
+      .attr("class", "title")
+      .text(title);
+
+  var graph = svg.append('g')
+      .attr('transform', 'translate(0,' + hTitle + ')');
+
+  graph.append('g')
+      .selectAll("circle")
+      .data(mdata._values[0][0])
+      .enter()
+      .append("circle")
+      .attr("r", "2")
+      .attr("cx", function(d, i) {
+         return d * Math.cos((tdata._values[0][0][i] - 90) * Math.PI / 180) * wChart / 2 / speedTicks + xCenter;
+      })
+      .attr("cy", function(d, i) {
+         return d * Math.sin((tdata._values[0][0][i] - 90) * Math.PI / 180) * wChart / 2 / speedTicks + yCenter;
+      })
+      .attr("fill", "#7bb0cd");
+
+  graph.append('g')
+      .selectAll("circle")
+      .data(sdat)
+      .enter()
+      .append("circle")
+      .attr("class", "axis")
+      .attr("r", function(d) {
+         return d * wChart / 2 / speedTicks;
+      })
+      .attr("cx", xCenter)
+      .attr("cy", yCenter);
+
+  graph.append('g')
+      .append("circle")
+      .attr("class", "axis axis-main")
+      .attr("r", wChart / 2)
+      .attr("cx", xCenter)
+      .attr("cy", yCenter)
+      .style("stroke-width", "2");
+
+  graph.append('g')
+      .selectAll("text")
+      .data(sdat)
+      .enter()
+      .append("text")
+      .attr("x", function(d) {
+         return (d * wChart / 2 / speedTicks) * Math.cos(-2) + xCenter;
+      })
+      .attr("y", function(d) {
+         return (d * wChart / 2 / speedTicks) * Math.sin(-2) + yCenter;
+      })
+      .style("text-anchor", "middle")
+      .text(function(d) {return d});
+
+  graph.append('g')
+      .selectAll("line")
+      .data(labels)
+      .enter()
+      .append("line")
+      .attr("x1",xCenter)
+      .attr("y1",yCenter)
+      .attr("x2", function(d) {
+         return Math.cos(d.angle * Math.PI / 180) * wChart / 2 + xCenter;
+      })
+      .attr("y2", function(d) {
+         return Math.sin(d.angle * Math.PI / 180) * wChart / 2 + yCenter;
+      })
+      .attr("class", "axis")
+
+  graph.append('g')
+      .selectAll("line")
+      .data(labels)
+      .enter()
+      .append("text")
+      .attr("x", function(d) {
+         return Math.cos((d.angle) * Math.PI / 180) * (wChart / 2 + 10) + xCenter;
+      })
+      .attr("y", function(d) {
+         return Math.sin((d.angle) * Math.PI / 180) * (wChart / 2 + 10) + yCenter + 5;
+      })
+      .style("text-anchor", "middle")
+      .text(function(d) {return d.name});
+
+}
+
+</script>
